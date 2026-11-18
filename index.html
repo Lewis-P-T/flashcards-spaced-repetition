@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flashcards</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><h1>Flashcards</h1><p class="sub">Spaced repetition study decks</p></header>
+  <main>
+    <p id="error" class="error" hidden></p>
+
+    <section id="view-decks">
+      <form id="new-deck-form" class="row">
+        <input id="new-deck-name" placeholder="New deck name" maxlength="60" required>
+        <button type="submit">Create deck</button>
+      </form>
+      <ul id="deck-list" class="list"></ul>
+    </section>
+
+    <section id="view-deck" hidden>
+      <div class="row between">
+        <button id="back-to-decks" class="link">&larr; All decks</button>
+        <h2 id="deck-title"></h2>
+      </div>
+      <form id="new-card-form" class="card-form">
+        <textarea id="card-front" placeholder="Front (question)" rows="2" required></textarea>
+        <textarea id="card-back" placeholder="Back (answer)" rows="2" required></textarea>
+        <button type="submit">Add card</button>
+      </form>
+      <ul id="card-list" class="list"></ul>
+    </section>
+  </main>
+  <script src="store.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
