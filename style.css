@@ -24,3 +24,14 @@ button.link { background: none; color: var(--accent); padding: 4px 0; }
 .card-item .back { color: var(--muted); }
 .error { background: #fde8e8; color: var(--danger); padding: 8px 12px; border-radius: 8px; }
 @media (max-width: 520px) { .card-item { grid-template-columns: 1fr; } }
+
+button.secondary { background: var(--border); color: var(--text); }
+button.link.danger-text { color: var(--danger); }
+.counts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.badge { font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; background: var(--border); color: var(--text); }
+.badge.new { background: #e3e9ff; color: #3a52c4; }
+.badge.due { background: #ffe9d6; color: #b35a00; }
+.badge.learned { background: #dff5e3; color: #23803a; }
+.card-item .meta { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; font-size: 0.9rem; }
+.card-item .meta .badge { margin-right: auto; }
+.card-item.editing .actions { grid-column: 1 / -1; display: flex; gap: 8px; }

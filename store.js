@@ -34,16 +34,53 @@ function addCard(state, deckId, front, back) {
   front = (front || '').trim();
   back = (back || '').trim();
   if (!front || !back) throw new Error('Card needs a front and a back');
-  const card = { id: uid(), front, back, created: Date.now() };
+  const now = Date.now();
+  const card = { id: uid(), front, back, created: now, sched: newSchedule(now) };
   deck.cards.push(card);
   return card;
+}
+
+function getCard(state, deckId, cardId) {
+  const deck = getDeck(state, deckId);
+  return deck ? deck.cards.find(c => c.id === cardId) || null : null;
+}
+
+function updateCard(state, deckId, cardId, front, back) {
+  const card = getCard(state, deckId, cardId);
+  if (!card) throw new Error('Card not found');
+  front = (front || '').trim();
+  back = (back || '').trim();
+  if (!front || !back) throw new Error('Card needs a front and a back');
+  card.front = front;
+  card.back = back;
+  return card;
+}
+
+function deleteCard(state, deckId, cardId) {
+  const deck = getDeck(state, deckId);
+  if (deck) deck.cards = deck.cards.filter(c => c.id !== cardId);
+}
+
+// Apply an SM-2 grade to a card and store the new schedule.
+function gradeCard(state, deckId, cardId, grade, now) {
+  const card = getCard(state, deckId, cardId);
+  if (!card) throw new Error('Card not found');
+  card.sched = review(schedOf(card), grade, now);
+  return card;
+}
+
+function deckCounts(deck, now) {
+  return countsFor(deck.cards, now);
 }
 
 function loadState(storage) {
   try {
     const raw = storage && storage.getItem(STORE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    return parsed && Array.isArray(parsed.decks) ? parsed : emptyState();
+    if (!parsed || !Array.isArray(parsed.decks)) return emptyState();
+    // Migrate skeleton-era cards that have no schedule yet.
+    for (const d of parsed.decks) for (const c of d.cards) if (!c.sched) c.sched = newSchedule(c.created);
+    return parsed;
   } catch (e) {
     return emptyState();
   }
@@ -54,5 +91,8 @@ function saveState(storage, state) {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { emptyState, createDeck, deleteDeck, getDeck, addCard, loadState, saveState, STORE_KEY };
+  // Node: pull scheduler functions in as globals so the code above resolves them.
+  Object.assign(globalThis, require('./sm2.js'));
+  module.exports = { emptyState, createDeck, deleteDeck, getDeck, addCard, getCard, updateCard, deleteCard,
+    gradeCard, deckCounts, loadState, saveState, STORE_KEY };
 }
