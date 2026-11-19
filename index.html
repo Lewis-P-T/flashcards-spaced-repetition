@@ -24,7 +24,10 @@
         <button id="back-to-decks" class="link">&larr; All decks</button>
         <h2 id="deck-title"></h2>
       </div>
-      <div id="deck-counts" class="counts"></div>
+      <div class="row between wrap">
+        <div id="deck-counts" class="counts"></div>
+        <button id="study-btn">Study</button>
+      </div>
       <form id="new-card-form" class="card-form">
         <textarea id="card-front" placeholder="Front (question)" rows="2" required></textarea>
         <textarea id="card-back" placeholder="Back (answer)" rows="2" required></textarea>
@@ -32,9 +35,38 @@
       </form>
       <ul id="card-list" class="list"></ul>
     </section>
+
+    <section id="view-review" hidden>
+      <div class="row between">
+        <button id="review-exit" class="link">&larr; End session</button>
+        <span id="review-progress" class="muted"></span>
+      </div>
+      <div class="progress"><div id="review-bar"></div></div>
+      <div id="review-card" class="review-card">
+        <div id="review-front" class="review-front"></div>
+        <div id="review-back" class="review-back" hidden></div>
+      </div>
+      <button id="reveal-btn" class="wide">Show answer <kbd>Space</kbd></button>
+      <div id="grade-row" class="grade-row" hidden>
+        <button class="grade again" data-grade="again">Again<small></small><kbd>1</kbd></button>
+        <button class="grade hard" data-grade="hard">Hard<small></small><kbd>2</kbd></button>
+        <button class="grade good" data-grade="good">Good<small></small><kbd>3</kbd></button>
+        <button class="grade easy" data-grade="easy">Easy<small></small><kbd>4</kbd></button>
+      </div>
+    </section>
+
+    <section id="view-summary" hidden>
+      <h2>Session complete</h2>
+      <div id="summary-stats" class="summary"></div>
+      <div class="row">
+        <button id="summary-again">Study more</button>
+        <button id="summary-done" class="secondary">Back to deck</button>
+      </div>
+    </section>
   </main>
   <script src="sm2.js"></script>
   <script src="store.js"></script>
+  <script src="session.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

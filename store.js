@@ -6,7 +6,7 @@ function uid() {
 }
 
 function emptyState() {
-  return { decks: [] };
+  return { decks: [], log: [] };
 }
 
 function createDeck(state, name) {
@@ -65,7 +65,11 @@ function deleteCard(state, deckId, cardId) {
 function gradeCard(state, deckId, cardId, grade, now) {
   const card = getCard(state, deckId, cardId);
   if (!card) throw new Error('Card not found');
-  card.sched = review(schedOf(card), grade, now);
+  const before = schedOf(card);
+  card.sched = review(before, grade, now);
+  // Review log feeds the stats view (retention, history, streak).
+  if (!Array.isArray(state.log)) state.log = [];
+  state.log.push({ t: card.sched.last, deckId, cardId, grade, wasNew: before.last === null, interval: card.sched.interval });
   return card;
 }
 
@@ -78,6 +82,7 @@ function loadState(storage) {
     const raw = storage && storage.getItem(STORE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
     if (!parsed || !Array.isArray(parsed.decks)) return emptyState();
+    if (!Array.isArray(parsed.log)) parsed.log = [];
     // Migrate skeleton-era cards that have no schedule yet.
     for (const d of parsed.decks) for (const c of d.cards) if (!c.sched) c.sched = newSchedule(c.created);
     return parsed;

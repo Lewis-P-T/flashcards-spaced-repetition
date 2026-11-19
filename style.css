@@ -35,3 +35,28 @@ button.link.danger-text { color: var(--danger); }
 .card-item .meta { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; font-size: 0.9rem; }
 .card-item .meta .badge { margin-right: auto; }
 .card-item.editing .actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+
+.row.wrap { flex-wrap: wrap; margin-top: 8px; }
+.muted { color: var(--muted); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.wide { width: 100%; margin-top: 12px; }
+kbd { font: 0.7rem monospace; background: rgba(255,255,255,0.25); border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+.progress { height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; margin: 8px 0 16px; }
+#review-bar { height: 100%; background: var(--accent); width: 0; transition: width 0.2s; }
+.review-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 32px 20px; min-height: 200px; text-align: center; white-space: pre-wrap; cursor: pointer; display: grid; align-content: center; gap: 20px; }
+.review-front { font-size: 1.4rem; font-weight: 600; }
+.review-back { font-size: 1.15rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 20px; }
+.grade-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.grade { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.grade small { font-size: 0.75rem; opacity: 0.85; }
+.grade kbd { margin: 2px 0 0; }
+.grade.again { background: var(--danger); }
+.grade.hard { background: #c98a1b; }
+.grade.good { background: #2f9e55; }
+.grade.easy { background: var(--accent); }
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }
+.stat { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; display: grid; }
+.stat strong { font-size: 1.3rem; }
+.stat span { color: var(--muted); font-size: 0.85rem; }
+.summary .full { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 520px) { .grade-row, .summary { grid-template-columns: repeat(2, 1fr); } }

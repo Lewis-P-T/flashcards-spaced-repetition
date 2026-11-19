@@ -3,6 +3,8 @@
 const storage = (() => { try { return window.localStorage; } catch (e) { return null; } })();
 let state = loadState(storage);
 let currentDeckId = null;
+let session = null;        // active review session, or null
+let showSummary = false;   // summary screen after a session ends
 
 const $ = sel => document.querySelector(sel);
 
@@ -17,9 +19,15 @@ function showError(msg) {
 function render() {
   showError('');
   const deck = currentDeckId ? getDeck(state, currentDeckId) : null;
-  $('#view-decks').hidden = !!deck;
-  $('#view-deck').hidden = !deck;
-  if (deck) renderDeck(deck); else renderDecks();
+  const mode = session ? 'review' : showSummary ? 'summary' : deck ? 'deck' : 'decks';
+  $('#view-decks').hidden = mode !== 'decks';
+  $('#view-deck').hidden = mode !== 'deck';
+  $('#view-review').hidden = mode !== 'review';
+  $('#view-summary').hidden = mode !== 'summary';
+  if (mode === 'review') renderReview();
+  else if (mode === 'summary') renderSummary();
+  else if (mode === 'deck') renderDeck(deck);
+  else renderDecks();
 }
 
 function emptyItem(text) {
@@ -46,7 +54,7 @@ function renderDecks() {
     const count = document.createElement('span');
     const c = deckCounts(deck);
     count.textContent = deck.cards.length + (deck.cards.length === 1 ? ' card' : ' cards') +
-      ' · ' + c.new + ' new · ' + c.due + ' due';
+      ' Â· ' + c.new + ' new Â· ' + c.due + ' due';
     open.append(name, count);
     open.onclick = () => { currentDeckId = deck.id; render(); };
     const del = document.createElement('button');
@@ -87,6 +95,10 @@ function renderDeck(deck) {
   const countsEl = $('#deck-counts');
   countsEl.innerHTML = '';
   countsEl.append(countsBadges(deckCounts(deck)));
+  const qLen = dueQueue(deck.cards).length;
+  const study = $('#study-btn');
+  study.textContent = qLen ? 'Study (' + qLen + ')' : 'Nothing due';
+  study.disabled = !qLen;
   const list = $('#card-list');
   list.innerHTML = '';
   if (!deck.cards.length) {
@@ -154,5 +166,114 @@ $('#new-card-form').addEventListener('submit', e => {
 });
 
 $('#back-to-decks').addEventListener('click', () => { currentDeckId = null; editingCardId = null; render(); });
+
+// ---- Review mode ----
+let lastSummary = null; // summary of the most recent session
+
+function startSession(deckId) {
+  const deck = getDeck(state, deckId);
+  if (!deck) return;
+  const items = dueQueue(deck.cards).map(c => ({ deckId, cardId: c.id }));
+  if (!items.length) return;
+  session = createSession(items);
+  showSummary = false;
+  render();
+}
+
+function endSession() {
+  if (!session) return;
+  lastSummary = sessionSummary(session);
+  session = null;
+  showSummary = lastSummary.total > 0;
+  render();
+}
+
+function renderReview() {
+  let item = sessionCurrent(session);
+  while (item && !getCard(state, item.deckId, item.cardId)) { session.index++; item = sessionCurrent(session); }
+  if (!item) { endSession(); return; }
+  const card = getCard(state, item.deckId, item.cardId);
+  const done = session.index, total = session.queue.length;
+  $('#review-progress').textContent = (done + 1) + ' / ' + total + (item.tries ? '  (again)' : '');
+  $('#review-bar').style.width = Math.round((done / total) * 100) + '%';
+  $('#review-front').textContent = card.front;
+  $('#review-back').textContent = card.back;
+  $('#review-back').hidden = !session.revealed;
+  $('#reveal-btn').hidden = session.revealed;
+  $('#grade-row').hidden = !session.revealed;
+  if (session.revealed) {
+    const now = Date.now();
+    for (const btn of document.querySelectorAll('.grade')) {
+      const next = review(schedOf(card), btn.dataset.grade, now);
+      btn.querySelector('small').textContent = formatInterval(next.due - now);
+    }
+  }
+}
+
+function doReveal() {
+  if (!session || session.revealed) return;
+  sessionReveal(session);
+  renderReview();
+}
+
+function doGrade(grade) {
+  if (!session || !session.revealed) return;
+  const item = sessionCurrent(session);
+  gradeCard(state, item.deckId, item.cardId, grade);
+  sessionGrade(session, grade);
+  persist();
+  if (sessionDone(session)) endSession(); else renderReview();
+}
+
+function renderSummary() {
+  const s = lastSummary;
+  const el = $('#summary-stats');
+  el.innerHTML = '';
+  const mins = Math.floor(s.seconds / 60), secs = s.seconds % 60;
+  const rows = [
+    ['Reviews', s.total], ['Cards', s.unique], ['Correct', s.correctPct + '%'],
+    ['Time', (mins ? mins + 'm ' : '') + secs + 's'],
+    ['Again', s.results.again], ['Hard', s.results.hard], ['Good', s.results.good], ['Easy', s.results.easy],
+  ];
+  for (const [label, val] of rows) {
+    const d = document.createElement('div');
+    d.className = 'stat';
+    const v = document.createElement('strong'); v.textContent = val;
+    const l = document.createElement('span'); l.textContent = label;
+    d.append(v, l);
+    el.append(d);
+  }
+  if (s.remaining > 0) {
+    const p = document.createElement('p'); p.className = 'muted full';
+    p.textContent = s.remaining + ' card(s) left in the queue â€” session ended early.';
+    el.append(p);
+  }
+  const deck = getDeck(state, currentDeckId);
+  const more = deck ? dueQueue(deck.cards).length : 0;
+  $('#summary-again').hidden = !more;
+  $('#summary-again').textContent = 'Study more (' + more + ')';
+}
+
+$('#study-btn').addEventListener('click', () => startSession(currentDeckId));
+$('#reveal-btn').addEventListener('click', doReveal);
+$('#review-card').addEventListener('click', doReveal);
+$('#review-exit').addEventListener('click', endSession);
+for (const btn of document.querySelectorAll('.grade')) btn.addEventListener('click', () => doGrade(btn.dataset.grade));
+$('#summary-again').addEventListener('click', () => startSession(currentDeckId));
+$('#summary-done').addEventListener('click', () => { showSummary = false; render(); });
+
+// Keyboard: Space/Enter reveal, 1-4 grade (Enter = Good once revealed), Esc ends the session.
+document.addEventListener('keydown', e => {
+  if (!session || e.target.matches('input, textarea')) return;
+  const keys = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' };
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    if (!session.revealed) doReveal(); else if (e.key === 'Enter') doGrade('good');
+  } else if (keys[e.key]) {
+    e.preventDefault(); doGrade(keys[e.key]);
+  } else if (e.key === 'Escape') {
+    endSession();
+  }
+});
 
 render();
