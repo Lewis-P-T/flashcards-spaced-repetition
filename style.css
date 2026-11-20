@@ -60,3 +60,8 @@ kbd { font: 0.7rem monospace; background: rgba(255,255,255,0.25); border-radius:
 .stat span { color: var(--muted); font-size: 0.85rem; }
 .summary .full { grid-column: 1 / -1; margin: 0; }
 @media (max-width: 520px) { .grade-row, .summary { grid-template-columns: repeat(2, 1fr); } }
+
+label.button { padding: 10px 14px; border-radius: 8px; cursor: pointer; display: inline-block; }
+label.button.secondary { background: var(--border); color: var(--text); }
+h3 { margin: 20px 0 8px; font-size: 1rem; color: var(--muted); }
+.chart { width: 100%; height: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }

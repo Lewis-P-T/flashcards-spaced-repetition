@@ -17,6 +17,24 @@
         <button type="submit">Create deck</button>
       </form>
       <ul id="deck-list" class="list"></ul>
+      <div class="row wrap">
+        <button id="stats-btn" class="secondary">Stats</button>
+        <button id="export-all" class="secondary">Export all (JSON)</button>
+        <label class="button secondary">Import JSON<input id="import-json" type="file" accept=".json,application/json" hidden></label>
+      </div>
+      <p id="io-msg" class="muted" hidden></p>
+    </section>
+
+    <section id="view-stats" hidden>
+      <div class="row between">
+        <button id="stats-back" class="link">&larr; All decks</button>
+        <h2>Stats</h2>
+      </div>
+      <div id="stats-tiles" class="summary"></div>
+      <h3>Due forecast (next 14 days)</h3>
+      <canvas id="forecast-chart" class="chart" width="680" height="180"></canvas>
+      <h3>Reviews (last 14 days)</h3>
+      <canvas id="history-chart" class="chart" width="680" height="180"></canvas>
     </section>
 
     <section id="view-deck" hidden>
@@ -34,6 +52,12 @@
         <button type="submit">Add card</button>
       </form>
       <ul id="card-list" class="list"></ul>
+      <div class="row wrap">
+        <button id="export-deck-json" class="secondary">Export JSON</button>
+        <button id="export-deck-csv" class="secondary">Export CSV</button>
+        <label class="button secondary">Import CSV<input id="import-csv" type="file" accept=".csv,text/csv" hidden></label>
+      </div>
+      <p id="deck-io-msg" class="muted" hidden></p>
     </section>
 
     <section id="view-review" hidden>
@@ -67,6 +91,8 @@
   <script src="sm2.js"></script>
   <script src="store.js"></script>
   <script src="session.js"></script>
+  <script src="stats.js"></script>
+  <script src="io.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

@@ -5,6 +5,7 @@ let state = loadState(storage);
 let currentDeckId = null;
 let session = null;        // active review session, or null
 let showSummary = false;   // summary screen after a session ends
+let showStats = false;     // stats screen
 
 const $ = sel => document.querySelector(sel);
 
@@ -18,14 +19,17 @@ function showError(msg) {
 
 function render() {
   showError('');
+  $('#io-msg').hidden = $('#deck-io-msg').hidden = true;
   const deck = currentDeckId ? getDeck(state, currentDeckId) : null;
-  const mode = session ? 'review' : showSummary ? 'summary' : deck ? 'deck' : 'decks';
+  const mode = session ? 'review' : showSummary ? 'summary' : showStats ? 'stats' : deck ? 'deck' : 'decks';
   $('#view-decks').hidden = mode !== 'decks';
+  $('#view-stats').hidden = mode !== 'stats';
   $('#view-deck').hidden = mode !== 'deck';
   $('#view-review').hidden = mode !== 'review';
   $('#view-summary').hidden = mode !== 'summary';
   if (mode === 'review') renderReview();
   else if (mode === 'summary') renderSummary();
+  else if (mode === 'stats') renderStats();
   else if (mode === 'deck') renderDeck(deck);
   else renderDecks();
 }
@@ -275,5 +279,95 @@ document.addEventListener('keydown', e => {
     endSession();
   }
 });
+
+// ---- Stats ----
+function drawBars(canvas, values, labels, color) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, pad = 24, top = 16;
+  ctx.clearRect(0, 0, W, H);
+  const css = getComputedStyle(document.body);
+  const muted = css.getPropertyValue('--muted').trim() || '#888';
+  const max = Math.max(1, ...values);
+  const slot = (W - pad) / values.length, bw = slot * 0.7;
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  values.forEach((v, i) => {
+    const h = (H - pad - top) * v / max;
+    const x = pad / 2 + i * slot + (slot - bw) / 2;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, H - pad - h, bw, h);
+    ctx.fillStyle = muted;
+    if (v) ctx.fillText(v, x + bw / 2, H - pad - h - 4);
+    ctx.fillText(labels[i], x + bw / 2, H - 8);
+  });
+}
+
+function dayLabels(startOffset, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(); d.setDate(d.getDate() + startOffset + i);
+    out.push(startOffset + i === 0 ? 'today' : String(d.getDate()));
+  }
+  return out;
+}
+
+function renderStats() {
+  const st = statsSummary(state, Date.now());
+  const tiles = $('#stats-tiles');
+  tiles.innerHTML = '';
+  for (const [label, val] of [['Cards', st.cards], ['Reviews today', st.today],
+    ['Retention', st.retention === null ? '—' : st.retention + '%'], ['Streak', st.streak + (st.streak === 1 ? ' day' : ' days')]]) {
+    const d = document.createElement('div'); d.className = 'stat';
+    const v = document.createElement('strong'); v.textContent = val;
+    const l = document.createElement('span'); l.textContent = label;
+    d.append(v, l); tiles.append(d);
+  }
+  const accent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#4f6bed';
+  drawBars($('#forecast-chart'), st.forecast, dayLabels(0, 14), accent);
+  drawBars($('#history-chart'), st.history, dayLabels(-13, 14), '#2f9e55');
+}
+
+$('#stats-btn').addEventListener('click', () => { showStats = true; render(); });
+$('#stats-back').addEventListener('click', () => { showStats = false; render(); });
+
+// ---- Import / export ----
+function download(filename, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function safeName(name) { return name.replace(/[^\w-]+/g, '_').slice(0, 40) || 'deck'; }
+
+function reportText(r) {
+  return 'Imported ' + r.cards + ' card(s)' + (r.decks ? ' into ' + r.decks + ' new deck(s)' : '') +
+    (r.skipped ? ', ' + r.skipped + ' duplicate(s) skipped' : '') + (r.invalid ? ', ' + r.invalid + ' invalid row(s) skipped' : '') + '.';
+}
+
+function flash(sel, msg) { const el = $(sel); el.textContent = msg; el.hidden = false; }
+
+// Import into a scratch copy so a failed import never leaves half-merged data.
+function runImport(input, fn, msgSel) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  file.text().then(text => {
+    const draft = JSON.parse(JSON.stringify(state));
+    const r = fn(draft, text, file);
+    state = draft; persist(); render(); flash(msgSel, reportText(r));
+  }).catch(err => { render(); showError('Import failed: ' + err.message); });
+}
+
+$('#export-all').addEventListener('click', () => download('flashcards.json', exportJSON(state.decks), 'application/json'));
+$('#import-json').addEventListener('change', e => runImport(e.target, (st, text) => importJSON(st, text), '#io-msg'));
+$('#export-deck-json').addEventListener('click', () => {
+  const d = getDeck(state, currentDeckId); download(safeName(d.name) + '.json', exportJSON([d]), 'application/json');
+});
+$('#export-deck-csv').addEventListener('click', () => {
+  const d = getDeck(state, currentDeckId); download(safeName(d.name) + '.csv', exportCSV(d), 'text/csv');
+});
+$('#import-csv').addEventListener('change', e => runImport(e.target, (st, text) => importCSV(st, getDeck(st, currentDeckId).name, text), '#deck-io-msg'));
 
 render();
