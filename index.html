@@ -16,6 +16,15 @@
         <input id="new-deck-name" placeholder="New deck name" maxlength="60" required>
         <button type="submit">Create deck</button>
       </form>
+      <div class="row wrap">
+        <input id="search" type="search" placeholder="Search all cards (words, #tag)" aria-label="Search all cards">
+        <button id="study-all">Study all due</button>
+      </div>
+      <div id="tag-cloud" class="counts"></div>
+      <div id="search-results" hidden>
+        <h3 id="search-title"></h3>
+        <ul id="search-list" class="list"></ul>
+      </div>
       <ul id="deck-list" class="list"></ul>
       <div class="row wrap">
         <button id="stats-btn" class="secondary">Stats</button>
@@ -49,6 +58,7 @@
       <form id="new-card-form" class="card-form">
         <textarea id="card-front" placeholder="Front (question)" rows="2" required></textarea>
         <textarea id="card-back" placeholder="Back (answer)" rows="2" required></textarea>
+        <input id="card-tags" placeholder="Tags (optional, e.g. verbs chapter1)">
         <button type="submit">Add card</button>
       </form>
       <ul id="card-list" class="list"></ul>
@@ -84,7 +94,7 @@
       <div id="summary-stats" class="summary"></div>
       <div class="row">
         <button id="summary-again">Study more</button>
-        <button id="summary-done" class="secondary">Back to deck</button>
+        <button id="summary-done" class="secondary">Done</button>
       </div>
     </section>
   </main>

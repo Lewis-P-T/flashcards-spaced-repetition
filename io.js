@@ -4,7 +4,7 @@ const MAX_IMPORT_CARDS = 10000;
 function exportJSON(decks) {
   return JSON.stringify({
     format: 'flashcards', version: 1,
-    decks: decks.map(d => ({ name: d.name, cards: d.cards.map(c => ({ front: c.front, back: c.back, sched: c.sched })) })),
+    decks: decks.map(d => ({ name: d.name, cards: d.cards.map(c => ({ front: c.front, back: c.back, tags: c.tags || [], sched: c.sched })) })),
   }, null, 2);
 }
 
@@ -56,7 +56,7 @@ function mergeCards(state, name, cards, report) {
     const key = front + '\u0000' + back;
     if (seen.has(key)) { report.skipped++; continue; }
     seen.add(key);
-    const card = addCard(state, deck.id, front, back);
+    const card = addCard(state, deck.id, front, back, Array.isArray(raw.tags) ? raw.tags : []);
     const s = validSched(raw.sched);
     if (s) card.sched = Object.assign({ lapses: 0 }, s);
     report.cards++;

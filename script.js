@@ -41,7 +41,64 @@ function emptyItem(text) {
   return li;
 }
 
+function tagChip(tag, active) {
+  const b = document.createElement('button');
+  b.className = 'tag' + (active ? ' active' : '');
+  b.textContent = '#' + tag;
+  b.onclick = e => { e.stopPropagation(); searchTag(tag); };
+  return b;
+}
+
+// Toggle "#tag" in the search box and show the decks view with results.
+function searchTag(tag) {
+  const box = $('#search');
+  const tok = '#' + tag;
+  const parts = box.value.split(/\s+/).filter(Boolean);
+  box.value = (parts.includes(tok) ? parts.filter(p => p !== tok) : parts.concat(tok)).join(' ');
+  currentDeckId = null; editingCardId = null; showStats = false; showSummary = false;
+  render();
+}
+
+function renderSearch() {
+  const q = $('#search').value.trim();
+  const wrap = $('#search-results');
+  wrap.hidden = !q;
+  if (!q) return;
+  const hits = searchCards(state, q);
+  $('#search-title').textContent = hits.length + (hits.length === 1 ? ' match' : ' matches');
+  const list = $('#search-list');
+  list.innerHTML = '';
+  if (!hits.length) { list.append(emptyItem('No cards match "' + q + '".')); return; }
+  const active = q.toLowerCase().split(/\s+/).filter(t => t.startsWith('#')).map(t => t.slice(1));
+  for (const { deck, card } of hits.slice(0, 100)) {
+    const li = document.createElement('li');
+    li.className = 'card-item clickable';
+    const f = document.createElement('div'); f.className = 'front'; f.textContent = card.front;
+    const b = document.createElement('div'); b.className = 'back'; b.textContent = card.back;
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const dn = document.createElement('span'); dn.className = 'deck-name'; dn.textContent = deck.name;
+    const tags = document.createElement('span'); tags.className = 'tags';
+    for (const t of card.tags || []) tags.append(tagChip(t, active.includes(t)));
+    meta.append(dn, tags);
+    li.append(f, b, meta);
+    li.onclick = () => { currentDeckId = deck.id; render(); };
+    list.append(li);
+  }
+}
+
 function renderDecks() {
+  const allDue = allDueItems(state).length;
+  const sa = $('#study-all');
+  sa.textContent = allDue ? 'Study all due (' + allDue + ')' : 'Nothing due';
+  sa.disabled = !allDue;
+  const cloud = $('#tag-cloud');
+  cloud.innerHTML = '';
+  const active = $('#search').value.toLowerCase().split(/\s+/).filter(t => t.startsWith('#')).map(t => t.slice(1));
+  const tagCounts = allTags(state);
+  for (const t of Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 30)) {
+    cloud.append(tagChip(t, active.includes(t)));
+  }
+  renderSearch();
   const list = $('#deck-list');
   list.innerHTML = '';
   if (!state.decks.length) {
@@ -116,18 +173,21 @@ function renderDeck(deck) {
       li.classList.add('editing');
       const f = document.createElement('textarea'); f.value = card.front; f.rows = 2;
       const b = document.createElement('textarea'); b.value = card.back; b.rows = 2;
+      const tg = document.createElement('input'); tg.value = (card.tags || []).join(' '); tg.placeholder = 'Tags';
+      tg.style.gridColumn = '1 / -1';
       const actions = document.createElement('div'); actions.className = 'actions';
       const save = document.createElement('button'); save.textContent = 'Save';
       save.onclick = () => {
         try {
           updateCard(state, deck.id, card.id, f.value, b.value);
+          setCardTags(state, deck.id, card.id, tg.value);
           editingCardId = null; persist(); render();
         } catch (err) { showError(err.message); }
       };
       const cancel = document.createElement('button'); cancel.className = 'secondary'; cancel.textContent = 'Cancel';
       cancel.onclick = () => { editingCardId = null; render(); };
       actions.append(save, cancel);
-      li.append(f, b, actions);
+      li.append(f, b, tg, actions);
       list.append(li);
       setTimeout(() => f.focus(), 0);
       continue;
@@ -144,7 +204,9 @@ function renderDeck(deck) {
     del.onclick = () => {
       if (confirm('Delete this card?')) { deleteCard(state, deck.id, card.id); persist(); render(); }
     };
-    meta.append(status, edit, del);
+    const tags = document.createElement('span'); tags.className = 'tags';
+    for (const t of card.tags || []) tags.append(tagChip(t, false));
+    meta.append(status, tags, edit, del);
     li.append(f, b, meta);
     list.append(li);
   }
@@ -162,8 +224,8 @@ $('#new-deck-form').addEventListener('submit', e => {
 $('#new-card-form').addEventListener('submit', e => {
   e.preventDefault();
   try {
-    addCard(state, currentDeckId, $('#card-front').value, $('#card-back').value);
-    $('#card-front').value = ''; $('#card-back').value = '';
+    addCard(state, currentDeckId, $('#card-front').value, $('#card-back').value, $('#card-tags').value);
+    $('#card-front').value = ''; $('#card-back').value = ''; // tags kept: handy for adding a batch
     persist(); render();
     $('#card-front').focus();
   } catch (err) { showError(err.message); }
@@ -173,12 +235,18 @@ $('#back-to-decks').addEventListener('click', () => { currentDeckId = null; edit
 
 // ---- Review mode ----
 let lastSummary = null; // summary of the most recent session
+let sessionScope = null; // deck id, or 'all' for the cross-deck study mode
 
-function startSession(deckId) {
-  const deck = getDeck(state, deckId);
-  if (!deck) return;
-  const items = dueQueue(deck.cards).map(c => ({ deckId, cardId: c.id }));
+function scopeItems(scope) {
+  if (scope === 'all') return allDueItems(state);
+  const deck = getDeck(state, scope);
+  return deck ? dueQueue(deck.cards).map(c => ({ deckId: scope, cardId: c.id })) : [];
+}
+
+function startSession(scope) {
+  const items = scopeItems(scope);
   if (!items.length) return;
+  sessionScope = scope;
   session = createSession(items);
   showSummary = false;
   render();
@@ -252,8 +320,7 @@ function renderSummary() {
     p.textContent = s.remaining + ' card(s) left in the queue — session ended early.';
     el.append(p);
   }
-  const deck = getDeck(state, currentDeckId);
-  const more = deck ? dueQueue(deck.cards).length : 0;
+  const more = scopeItems(sessionScope).length;
   $('#summary-again').hidden = !more;
   $('#summary-again').textContent = 'Study more (' + more + ')';
 }
@@ -263,7 +330,9 @@ $('#reveal-btn').addEventListener('click', doReveal);
 $('#review-card').addEventListener('click', doReveal);
 $('#review-exit').addEventListener('click', endSession);
 for (const btn of document.querySelectorAll('.grade')) btn.addEventListener('click', () => doGrade(btn.dataset.grade));
-$('#summary-again').addEventListener('click', () => startSession(currentDeckId));
+$('#summary-again').addEventListener('click', () => startSession(sessionScope));
+$('#study-all').addEventListener('click', () => startSession('all'));
+$('#search').addEventListener('input', () => { renderDecks(); });
 $('#summary-done').addEventListener('click', () => { showSummary = false; render(); });
 
 // Keyboard: Space/Enter reveal, 1-4 grade (Enter = Good once revealed), Esc ends the session.

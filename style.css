@@ -65,3 +65,10 @@ label.button { padding: 10px 14px; border-radius: 8px; cursor: pointer; display:
 label.button.secondary { background: var(--border); color: var(--text); }
 h3 { margin: 20px 0 8px; font-size: 1rem; color: var(--muted); }
 .chart { width: 100%; height: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+
+.tag { font-size: 0.75rem; padding: 1px 7px; border-radius: 999px; background: #efe3ff; color: #6b3fb5; border: 0; cursor: pointer; }
+.tag.active { background: #6b3fb5; color: #fff; }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.card-item .deck-name { font-size: 0.8rem; color: var(--muted); }
+#tag-cloud { margin: 8px 0 0; }
+.clickable { cursor: pointer; }

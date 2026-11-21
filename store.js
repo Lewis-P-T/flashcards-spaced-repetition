@@ -28,14 +28,14 @@ function getDeck(state, deckId) {
   return state.decks.find(d => d.id === deckId) || null;
 }
 
-function addCard(state, deckId, front, back) {
+function addCard(state, deckId, front, back, tags) {
   const deck = getDeck(state, deckId);
   if (!deck) throw new Error('Deck not found');
   front = (front || '').trim();
   back = (back || '').trim();
   if (!front || !back) throw new Error('Card needs a front and a back');
   const now = Date.now();
-  const card = { id: uid(), front, back, created: now, sched: newSchedule(now) };
+  const card = { id: uid(), front, back, created: now, sched: newSchedule(now), tags: parseTags(tags) };
   deck.cards.push(card);
   return card;
 }
@@ -73,6 +73,56 @@ function gradeCard(state, deckId, cardId, grade, now) {
   return card;
 }
 
+// Tags: lowercase words, split on commas/whitespace, leading '#' dropped, deduped.
+function parseTags(input) {
+  const list = Array.isArray(input) ? input : String(input || '').split(/[\s,]+/);
+  const out = [];
+  for (let t of list) {
+    t = String(t).trim().replace(/^#+/, '').toLowerCase().slice(0, 30);
+    if (t && !out.includes(t)) out.push(t);
+  }
+  return out;
+}
+
+function setCardTags(state, deckId, cardId, input) {
+  const card = getCard(state, deckId, cardId);
+  if (!card) throw new Error('Card not found');
+  card.tags = parseTags(input);
+  return card;
+}
+
+function allTags(state) {
+  const counts = {};
+  for (const d of state.decks) for (const c of d.cards) for (const t of c.tags || []) counts[t] = (counts[t] || 0) + 1;
+  return counts;
+}
+
+// Search every deck. Query tokens are ANDed: "#tag" must be a card tag, other words must
+// appear in the front or back (case-insensitive). Returns [{deck, card}].
+function searchCards(state, query) {
+  const tokens = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return [];
+  const tags = tokens.filter(t => t.startsWith('#') && t.length > 1).map(t => t.slice(1));
+  const words = tokens.filter(t => !t.startsWith('#'));
+  const hits = [];
+  for (const deck of state.decks) for (const card of deck.cards) {
+    const text = (card.front + '\n' + card.back).toLowerCase();
+    const ctags = card.tags || [];
+    if (tags.every(t => ctags.includes(t)) && words.every(w => text.includes(w))) hits.push({ deck, card });
+  }
+  return hits;
+}
+
+// "Study all due": due reviews from every deck, most overdue first, then new cards (shared limit).
+function allDueItems(state, now, newLimit) {
+  now = now || Date.now();
+  if (newLimit === undefined) newLimit = 20;
+  const owner = new Map();
+  const cards = [];
+  for (const d of state.decks) for (const c of d.cards) { owner.set(c, d.id); cards.push(c); }
+  return dueQueue(cards, now, newLimit).map(c => ({ deckId: owner.get(c), cardId: c.id }));
+}
+
 function deckCounts(deck, now) {
   return countsFor(deck.cards, now);
 }
@@ -99,5 +149,5 @@ if (typeof module !== 'undefined') {
   // Node: pull scheduler functions in as globals so the code above resolves them.
   Object.assign(globalThis, require('./sm2.js'));
   module.exports = { emptyState, createDeck, deleteDeck, getDeck, addCard, getCard, updateCard, deleteCard,
-    gradeCard, deckCounts, loadState, saveState, STORE_KEY };
+    gradeCard, deckCounts, parseTags, setCardTags, allTags, searchCards, allDueItems, loadState, saveState, STORE_KEY };
 }
