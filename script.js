@@ -102,7 +102,12 @@ function renderDecks() {
   const list = $('#deck-list');
   list.innerHTML = '';
   if (!state.decks.length) {
-    list.append(emptyItem('No decks yet. Create one above.'));
+    const li = emptyItem('No decks yet. Create one above, or ');
+    const b = document.createElement('button');
+    b.className = 'link'; b.textContent = 'load a sample deck';
+    b.addEventListener('click', () => { addSampleDeck(state); persist(); render(); });
+    li.append(b, '.');
+    list.append(li);
     return;
   }
   for (const deck of state.decks) {
@@ -438,5 +443,25 @@ $('#export-deck-csv').addEventListener('click', () => {
   const d = getDeck(state, currentDeckId); download(safeName(d.name) + '.csv', exportCSV(d), 'text/csv');
 });
 $('#import-csv').addEventListener('change', e => runImport(e.target, (st, text) => importCSV(st, getDeck(st, currentDeckId).name, text), '#deck-io-msg'));
+
+// ---- Theme ----
+// Saved choice wins; otherwise follow the OS via CSS prefers-color-scheme.
+function isDark() {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function applyTheme(t) {
+  if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  $('#theme-btn').textContent = isDark() ? 'Light mode' : 'Dark mode';
+  if (!$('#view-stats').hidden) renderStats(); // canvas colours come from CSS vars
+}
+let theme = null;
+try { theme = storage && storage.getItem('flashcards.theme'); } catch (e) { /* ignore */ }
+$('#theme-btn').addEventListener('click', () => {
+  theme = isDark() ? 'light' : 'dark';
+  try { storage && storage.setItem('flashcards.theme', theme); } catch (e) { /* ignore */ }
+  applyTheme(theme);
+});
+applyTheme(theme);
 
 render();

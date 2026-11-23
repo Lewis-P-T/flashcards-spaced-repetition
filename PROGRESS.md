@@ -7,4 +7,4 @@
 - [x] 5. Stats view: 14-day due forecast chart (canvas), review history, retention rate, daily streak
 - [x] 6. Import/export decks as JSON and CSV (front,back), with validation and merge
 - [x] 7. Tags + search across all cards, "study all due" mode across decks
-- [ ] 8. Polish: dark/light theme, responsive layout, empty states, sample deck, README
+- [x] 8. Polish: dark/light theme, responsive layout, empty states, sample deck, README

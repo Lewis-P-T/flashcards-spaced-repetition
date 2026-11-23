@@ -123,6 +123,19 @@ function allDueItems(state, now, newLimit) {
   return dueQueue(cards, now, newLimit).map(c => ({ deckId: owner.get(c), cardId: c.id }));
 }
 
+// Starter deck so a first-time user has something to study straight away.
+const SAMPLE_DECK = { name: 'Sample: World Capitals', cards: [
+  ['France', 'Paris', 'europe'], ['Japan', 'Tokyo', 'asia'], ['Kenya', 'Nairobi', 'africa'],
+  ['Canada', 'Ottawa', 'americas'], ['Australia', 'Canberra', 'oceania'], ['Germany', 'Berlin', 'europe'],
+  ['Thailand', 'Bangkok', 'asia'], ['Brazil', 'Brasília', 'americas'], ['Egypt', 'Cairo', 'africa'],
+  ['New Zealand', 'Wellington', 'oceania'] ] };
+
+function addSampleDeck(state) {
+  const deck = createDeck(state, SAMPLE_DECK.name);
+  for (const [f, b, t] of SAMPLE_DECK.cards) addCard(state, deck.id, 'Capital of ' + f + '?', b, t);
+  return deck;
+}
+
 function deckCounts(deck, now) {
   return countsFor(deck.cards, now);
 }
@@ -149,5 +162,5 @@ if (typeof module !== 'undefined') {
   // Node: pull scheduler functions in as globals so the code above resolves them.
   Object.assign(globalThis, require('./sm2.js'));
   module.exports = { emptyState, createDeck, deleteDeck, getDeck, addCard, getCard, updateCard, deleteCard,
-    gradeCard, deckCounts, parseTags, setCardTags, allTags, searchCards, allDueItems, loadState, saveState, STORE_KEY };
+    gradeCard, deckCounts, parseTags, setCardTags, allTags, searchCards, allDueItems, addSampleDeck, loadState, saveState, STORE_KEY };
 }

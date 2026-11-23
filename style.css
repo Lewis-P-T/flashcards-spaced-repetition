@@ -72,3 +72,33 @@ h3 { margin: 20px 0 8px; font-size: 1rem; color: var(--muted); }
 .card-item .deck-name { font-size: 0.8rem; color: var(--muted); }
 #tag-cloud { margin: 8px 0 0; }
 .clickable { cursor: pointer; }
+
+/* ---- Theme: dark via OS preference unless the user picked light; or forced dark ---- */
+:root { color-scheme: light; --badge-new: #e3e9ff; --badge-new-t: #3a52c4; --badge-due: #ffe9d6; --badge-due-t: #b35a00;
+  --badge-ok: #dff5e3; --badge-ok-t: #23803a; --tag: #efe3ff; --tag-t: #6b3fb5; --err-bg: #fde8e8; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; --bg: #14161f; --panel: #1e212d; --text: #e6e8f0; --muted: #9aa0b4;
+    --accent: #6f88ff; --danger: #ef6b6b; --border: #323648; --badge-new: #26305a; --badge-new-t: #a9b8ff;
+    --badge-due: #4a3220; --badge-due-t: #ffc28a; --badge-ok: #1f3d29; --badge-ok-t: #8fe0a5; --tag: #36275a; --tag-t: #d3b9ff; --err-bg: #4a2424; }
+}
+:root[data-theme="dark"] { color-scheme: dark; --bg: #14161f; --panel: #1e212d; --text: #e6e8f0; --muted: #9aa0b4;
+  --accent: #6f88ff; --danger: #ef6b6b; --border: #323648; --badge-new: #26305a; --badge-new-t: #a9b8ff;
+  --badge-due: #4a3220; --badge-due-t: #ffc28a; --badge-ok: #1f3d29; --badge-ok-t: #8fe0a5; --tag: #36275a; --tag-t: #d3b9ff; --err-bg: #4a2424; }
+.badge.new { background: var(--badge-new); color: var(--badge-new-t); }
+.badge.due { background: var(--badge-due); color: var(--badge-due-t); }
+.badge.learned { background: var(--badge-ok); color: var(--badge-ok-t); }
+.tag { background: var(--tag); color: var(--tag-t); }
+.tag.active { background: var(--tag-t); color: var(--panel); }
+.error { background: var(--err-bg); }
+header { position: relative; }
+.theme-btn { position: absolute; top: 12px; right: 16px; padding: 6px 10px; font-size: 0.85rem; }
+.empty button.link { padding: 0; font-size: inherit; }
+
+/* ---- Narrow screens ---- */
+@media (max-width: 520px) {
+  header { padding-top: 48px; }
+  #new-deck-form, .row.wrap { flex-wrap: wrap; }
+  #new-deck-form input, #search { flex-basis: 100%; }
+  .row.wrap > button, .row.wrap > label.button { flex: 1 1 auto; text-align: center; }
+  .review-card { padding: 24px 14px; min-height: 160px; }
+}
